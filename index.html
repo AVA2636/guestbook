@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多人留言板 | 大家一起聊</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 2rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        .form-section {
+            padding: 2rem;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 0.8rem;
+            margin: 0.5rem 0 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 2rem;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+        }
+        .messages-section {
+            padding: 2rem;
+        }
+        .message-card {
+            background: #f8f9fa;
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #764ba2;
+        }
+        .message-name {
+            font-weight: bold;
+            color: #764ba2;
+        }
+        .message-time {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-left: 1rem;
+        }
+        .message-content {
+            margin-top: 0.5rem;
+            color: #212529;
+        }
+        .empty {
+            text-align: center;
+            color: #6c757d;
+            padding: 2rem;
+        }
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📝 多人留言板</h1>
+        <p>所有人可见，一起分享心情</p>
+    </div>
+    
+    <div class="form-section">
+        <input type="text" id="name" placeholder="你的昵称" maxlength="30">
+        <textarea id="content" rows="3" placeholder="写下你想说的话..." maxlength="500"></textarea>
+        <button onclick="submitMessage()">✍️ 发布留言</button>
+    </div>
+    
+    <div class="messages-section">
+        <h3>💬 最新留言</h3>
+        <div id="messagesList" class="loading">加载中...</div>
+    </div>
+</div>
+
+<script>
+    const API_URL = '/api/messages';
+    
+    async function loadMessages() {
+        try {
+            const res = await fetch(API_URL);
+            const messages = await res.json();
+            const container = document.getElementById('messagesList');
+            
+            if (messages.length === 0) {
+                container.innerHTML = '<div class="empty">✨ 还没有留言，来说第一句吧 ✨</div>';
+                return;
+            }
+            
+            container.innerHTML = messages.map(msg => `
+                <div class="message-card">
+                    <div>
+                        <span class="message-name">${escapeHtml(msg.name)}</span>
+                        <span class="message-time">${new Date(msg.time).toLocaleString()}</span>
+                    </div>
+                    <div class="message-content">${escapeHtml(msg.content)}</div>
+                </div>
+            `).join('');
+        } catch (err) {
+            document.getElementById('messagesList').innerHTML = '<div class="empty">加载失败，请刷新重试</div>';
+        }
+    }
+    
+    async function submitMessage() {
+        const name = document.getElementById('name').value.trim();
+        const content = document.getElementById('content').value.trim();
+        
+        if (!name) {
+            alert('请输入昵称');
+            return;
+        }
+        if (!content) {
+            alert('请输入留言内容');
+            return;
+        }
+        
+        try {
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, content })
+            });
+            
+            if (res.ok) {
+                document.getElementById('content').value = '';
+                loadMessages();
+            } else {
+                alert('发布失败，请重试');
+            }
+        } catch (err) {
+            alert('网络错误，请重试');
+        }
+    }
+    
+    function escapeHtml(str) {
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    loadMessages();
+</script>
+</body>
+</html>
